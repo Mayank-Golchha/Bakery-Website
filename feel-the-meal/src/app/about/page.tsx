@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { motion } from "framer-motion";
 
@@ -16,7 +18,7 @@ export default function AboutPage() {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[var(--text-primary)] mb-8 leading-tight">
             Crafting <span className="text-gradient-gold">Memories</span>, One Bite at a Time
           </h1>
-          
+
           <div className="space-y-6 text-[var(--text-secondary)] text-base sm:text-lg leading-relaxed text-left sm:text-center mt-12">
             <p>
               Welcome to Feel The Meal. We started with a simple belief: that confections are more than just food. They are celebrations, moments of comfort, and expressions of love. Every cake we bake, every cookie we craft, and every chocolate we temper is a testament to this philosophy.

@@ -1,6 +1,10 @@
+"use client";
+
+
 import React from "react";
 import { motion } from "framer-motion";
-import { Instagram, Phone, Mail } from "lucide-react";
+import { Phone, Mail } from "lucide-react";
+import { FaInstagram } from "react-icons/fa";
 
 export default function ContactPage() {
   return (
@@ -23,7 +27,7 @@ export default function ContactPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Phone */}
-            <a 
+            <a
               href="tel:+919953573758"
               className="group flex flex-col items-center p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--accent-gold)]/50 transition-all duration-300 hover:-translate-y-1"
             >
@@ -35,7 +39,7 @@ export default function ContactPage() {
             </a>
 
             {/* Email */}
-            <a 
+            <a
               href="mailto:feelthemeal21@gmail.com"
               className="group flex flex-col items-center p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--accent-gold)]/50 transition-all duration-300 hover:-translate-y-1"
             >
@@ -47,14 +51,14 @@ export default function ContactPage() {
             </a>
 
             {/* Instagram */}
-            <a 
+            <a
               href="https://www.instagram.com/feel.the_meal?igsh=MXRlanhzdzFyb3JhZQ=="
               target="_blank"
               rel="noopener noreferrer"
               className="group flex flex-col items-center p-8 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--accent-gold)]/50 transition-all duration-300 hover:-translate-y-1"
             >
               <div className="w-12 h-12 rounded-full bg-[var(--accent-gold)]/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Instagram className="w-5 h-5 text-[var(--accent-gold)]" />
+                <FaInstagram className="w-5 h-5 text-[var(--accent-gold)]" />
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Follow Us</h3>
               <p className="text-[var(--text-secondary)] text-sm">@feel.the_meal</p>
