@@ -40,6 +40,7 @@ function CheckoutContent() {
 
   // Form state
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [state, setState] = useState("");
@@ -84,7 +85,7 @@ function CheckoutContent() {
     e.preventDefault();
     setFormSubmitted(true);
 
-    if (!name.trim() || !phone.trim() || !address.trim() || !state) return;
+    if (!name.trim() || !email.trim() || !phone.trim() || !address.trim() || !state) return;
 
     // Check which products are NOT available in the selected state
     const notAvailable = checkoutItems
@@ -136,6 +137,7 @@ function CheckoutContent() {
                 razorpay_signature: response.razorpay_signature,
                 orderDetails: {
                   name,
+                  email,
                   phone,
                   address,
                   state,
@@ -386,6 +388,24 @@ function CheckoutContent() {
                 )}
               </div>
 
+              {/* Email */}
+              <div>
+                <label className="block text-xs text-[var(--text-secondary)] mb-1.5">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-dark text-sm"
+                  placeholder="your.email@example.com"
+                  id="checkout-email"
+                />
+                {formSubmitted && !email.trim() && (
+                  <p className="text-xs text-red-400 mt-1">Email is required</p>
+                )}
+              </div>
+
               {/* Phone */}
               <div>
                 <label className="block text-xs text-[var(--text-secondary)] mb-1.5">
@@ -488,6 +508,7 @@ function CheckoutContent() {
               {unavailableProducts.length === 0 &&
                 formSubmitted &&
                 name.trim() &&
+                email.trim() &&
                 phone.trim() &&
                 address.trim() &&
                 state && (
