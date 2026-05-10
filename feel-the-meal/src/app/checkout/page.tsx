@@ -150,7 +150,7 @@ function CheckoutContent() {
 
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
-              alert("Payment successful! Your order has been placed.");
+              alert("Payment successful! Your order details has been send to you mail.");
               if (!singleProduct) {
                 // Clear cart if it was a cart checkout
                 cartItems.forEach(item => removeFromCart(item.product.id));
@@ -504,18 +504,6 @@ function CheckoutContent() {
               >
                 {isProcessing ? "Processing..." : unavailableProducts.length > 0 ? "Check Again" : `Pay Rs. ${checkoutTotal.toLocaleString("en-IN")}`}
               </button>
-
-              {unavailableProducts.length === 0 &&
-                formSubmitted &&
-                name.trim() &&
-                email.trim() &&
-                phone.trim() &&
-                address.trim() &&
-                state && (
-                  <p className="text-xs text-emerald-400 text-center mt-2">
-                    All items are available in {state}. Secure payment powered by Razorpay.
-                  </p>
-                )}
             </form>
           </motion.div>
         </div>
