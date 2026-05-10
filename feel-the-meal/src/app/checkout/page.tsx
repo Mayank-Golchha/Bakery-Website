@@ -22,6 +22,7 @@ import {
   Minus,
   Plus,
   Trash2,
+  Check,
 } from "lucide-react";
 import { Product, INDIAN_STATES, CartItem } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
@@ -47,6 +48,7 @@ function CheckoutContent() {
   const [unavailableProducts, setUnavailableProducts] = useState<string[]>([]);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const router = useRouter();
 
   // Fetch single product if buying directly
@@ -150,12 +152,11 @@ function CheckoutContent() {
 
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
-              alert("Payment successful! Your order details has been send to you mail.");
               if (!singleProduct) {
                 // Clear cart if it was a cart checkout
                 cartItems.forEach(item => removeFromCart(item.product.id));
               }
-              router.push("/products");
+              setPaymentSuccess(true);
             } else {
               alert("Payment verification failed. Please contact support.");
             }
@@ -214,6 +215,34 @@ function CheckoutContent() {
             Browse Products
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (paymentSuccess) {
+    return (
+      <div className="min-h-screen pt-24 pb-16 flex items-center justify-center bg-[var(--bg-primary)] px-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full p-8 rounded-2xl bg-[var(--bg-card)] border border-emerald-500/30 text-center"
+        >
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
+            <Check className="w-8 h-8 text-emerald-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">
+            Payment Successful!
+          </h2>
+          <p className="text-[var(--text-secondary)] text-sm mb-8 leading-relaxed">
+            Your order details have been successfully sent to your email address. We are preparing your delicious confections.
+          </p>
+          <button
+            onClick={() => router.push("/products")}
+            className="w-full btn-primary py-3 rounded-xl text-sm font-semibold"
+          >
+            Continue Shopping
+          </button>
+        </motion.div>
       </div>
     );
   }

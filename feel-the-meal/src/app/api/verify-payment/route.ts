@@ -103,22 +103,24 @@ export async function POST(req: Request) {
     `;
 
     // Send Email to Admin
-    await resend.emails.send({
+    const adminRes = await resend.emails.send({
       from: "Feel The Meal <onboarding@resend.dev>", // Replace with your verified domain
       to: adminEmail,
       subject: `New Order from ${name} - Rs. ${totalPaid}`,
       html: adminEmailHtml,
     });
+    if (adminRes.error) console.error("Admin Email Error:", adminRes.error);
 
     // Send Email to Customer
-    await resend.emails.send({
+    const customerRes = await resend.emails.send({
       from: "Feel The Meal <onboarding@resend.dev>", // Replace with your verified domain
       to: email,
       subject: "Your Feel The Meal Order Confirmation",
       html: customerEmailHtml,
     });
+    if (customerRes.error) console.error("Customer Email Error:", customerRes.error);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, emailErrors: { admin: adminRes.error, customer: customerRes.error } });
   } catch (error: any) {
     console.error("Payment verification/email error:", error);
     return NextResponse.json(
