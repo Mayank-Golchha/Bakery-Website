@@ -11,8 +11,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Search, Menu, X, Lock } from "lucide-react";
+import { ShoppingCart, Search, Menu, X, Lock, LogIn, LogOut, Package } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -29,6 +30,7 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const pathname = usePathname();
   const { totalItems, setIsCartOpen } = useCart();
+  const { user, loginWithGoogle, logout } = useAuth();
 
   // Track scroll to add glass effect
   useEffect(() => {
@@ -140,6 +142,43 @@ export default function Navbar() {
               )}
             </button>
 
+            {/* User Auth */}
+            {user ? (
+              <div className="hidden sm:flex items-center gap-3 border-l border-white/10 pl-3">
+                <Link
+                  href="/orders"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 hover:border-[var(--accent-gold)]/30 hover:bg-white/5 transition-all text-xs text-[var(--text-secondary)] hover:text-[var(--accent-gold)]"
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  Orders
+                </Link>
+                <div className="flex items-center gap-2">
+                  {user.user_metadata?.avatar_url && (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="Avatar"
+                      className="w-6 h-6 rounded-full"
+                    />
+                  )}
+                  <button
+                    onClick={logout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 hover:border-red-500/30 hover:text-red-400 hover:bg-red-500/10 transition-all text-xs text-[var(--text-secondary)]"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Logout
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={loginWithGoogle}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 hover:border-[var(--accent-gold)]/30 hover:bg-white/5 transition-all text-xs text-[var(--text-secondary)] hover:text-[var(--accent-gold)]"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Login
+              </button>
+            )}
+
             {/* Admin Link */}
             <Link
               href="/admin"
@@ -204,9 +243,36 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              {user ? (
+                <>
+                  <Link
+                    href="/orders"
+                    className="flex items-center gap-2 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)]"
+                  >
+                    <Package className="w-4 h-4" />
+                    My Orders
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="flex items-center gap-2 py-2 text-sm text-red-400 w-full text-left"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={loginWithGoogle}
+                  className="flex items-center gap-2 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] w-full text-left"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login with Google
+                </button>
+              )}
+
               <Link
                 href="/admin"
-                className="flex items-center gap-2 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)]"
+                className="flex items-center gap-2 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] border-t border-white/10 pt-4 mt-2"
               >
                 <Lock className="w-4 h-4" />
                 Admin Panel

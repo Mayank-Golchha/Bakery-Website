@@ -27,6 +27,7 @@ import {
 import { Product, INDIAN_STATES, CartItem } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -50,6 +51,15 @@ function CheckoutContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const router = useRouter();
+  const { user, loginWithGoogle } = useAuth();
+
+  // Pre-fill form if user is available
+  useEffect(() => {
+    if (user && !email) {
+      setEmail(user.email || "");
+      setName(user.user_metadata?.full_name || "");
+    }
+  }, [user, email]);
 
   // Fetch single product if buying directly
   useEffect(() => {
@@ -147,6 +157,7 @@ function CheckoutContent() {
                   totalPaid: checkoutTotal,
                   orderDate: new Date().toISOString(),
                 },
+                userId: user?.id,
               }),
             });
 
@@ -524,15 +535,29 @@ function CheckoutContent() {
                 </motion.div>
               )}
 
-              {/* Pay Button */}
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="w-full btn-primary py-3.5 rounded-xl text-sm font-semibold mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
-                id="checkout-pay-btn"
-              >
-                {isProcessing ? "Processing..." : unavailableProducts.length > 0 ? "Check Again" : `Pay Rs. ${checkoutTotal.toLocaleString("en-IN")}`}
-              </button>
+              {user ? (
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="w-full btn-primary py-3.5 rounded-xl text-sm font-semibold mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+                  id="checkout-pay-btn"
+                >
+                  {isProcessing ? "Processing..." : unavailableProducts.length > 0 ? "Check Again" : `Pay Rs. ${checkoutTotal.toLocaleString("en-IN")}`}
+                </button>
+              ) : (
+                <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+                  <p className="text-sm text-[var(--text-secondary)] mb-3">
+                    Please log in to complete your purchase
+                  </p>
+                  <button
+                    type="button"
+                    onClick={loginWithGoogle}
+                    className="w-full btn-primary py-3 rounded-xl text-sm font-semibold"
+                  >
+                    Login with Google
+                  </button>
+                </div>
+              )}
             </form>
           </motion.div>
         </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { Resend } from "resend";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +11,7 @@ export async function POST(req: Request) {
       razorpay_payment_id,
       razorpay_signature,
       orderDetails,
+      userId,
     } = body;
 
     // Verify Signature
@@ -120,7 +122,29 @@ export async function POST(req: Request) {
     });
     if (customerRes.error) console.error("Customer Email Error:", customerRes.error);
 
-    return NextResponse.json({ success: true, emailErrors: { admin: adminRes.error, customer: customerRes.error } });
+    // Save order to database
+    const { error: dbError } = await supabase.from("orders").insert([
+      {
+        user_id: userId || null,
+        payment_id: razorpay_payment_id,
+        total_amount: totalPaid,
+        status: "pending",
+        delivery_details: {
+          name,
+          email,
+          phone,
+          address,
+          state,
+        },
+        items: items,
+      },
+    ]);
+
+    if (dbError) {
+      console.error("Database insert error:", dbError);
+    }
+
+    return NextResponse.json({ success: true, emailErrors: { admin: adminRes.error, customer: customerRes.error }, dbError });
   } catch (error: any) {
     console.error("Payment verification/email error:", error);
     return NextResponse.json(

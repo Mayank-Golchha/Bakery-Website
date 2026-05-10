@@ -24,6 +24,9 @@ import {
   Upload,
   Package,
   Search,
+  ShoppingBag,
+  CheckCircle,
+  Clock,
 } from "lucide-react";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 import { Product, ProductCategory, INDIAN_STATES } from "@/lib/types";
@@ -45,7 +48,11 @@ export default function AdminDashboard() {
   const { logout } = useAdminAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"products" | "orders">("products");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Form state
@@ -57,26 +64,44 @@ export default function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  // Fetch products
-  const fetchProducts = useCallback(async () => {
+  const fetchProductsAndOrders = useCallback(async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [productsRes, ordersRes] = await Promise.all([
+        supabase.from("products").select("*").order("created_at", { ascending: false }),
+        supabase.from("orders").select("*").order("created_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setProducts(data || []);
-    } catch {
-      setProducts([]);
+      if (productsRes.error) throw productsRes.error;
+      if (ordersRes.error) throw ordersRes.error;
+
+      setProducts(productsRes.data || []);
+      setOrders(ordersRes.data || []);
+    } catch (err) {
+      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchProductsAndOrders();
+  }, [fetchProductsAndOrders]);
+
+  const toggleOrderStatus = async (orderId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "completed" ? "pending" : "completed";
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: newStatus })
+        .eq("id", orderId);
+      
+      if (error) throw error;
+      await fetchProductsAndOrders();
+    } catch (err) {
+      console.error("Failed to update order status:", err);
+    }
+  };
 
   // Open form for new product
   const handleNewProduct = () => {
@@ -175,7 +200,7 @@ export default function AdminDashboard() {
       setForm(EMPTY_PRODUCT);
       setImageFile(null);
       setImagePreview("");
-      await fetchProducts();
+      await fetchProductsAndOrders();
     } catch (err) {
       console.error("Save error:", err);
     } finally {
@@ -190,7 +215,7 @@ export default function AdminDashboard() {
 
       if (error) throw error;
       setDeleteConfirm(null);
-      await fetchProducts();
+      await fetchProductsAndOrders();
     } catch (err) {
       console.error("Delete error:", err);
     }
@@ -232,6 +257,13 @@ export default function AdminDashboard() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredOrders = orders.filter((o) => {
+    const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.delivery_details?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = orderStatusFilter === "all" || o.status === orderStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="min-h-screen pt-20 pb-16 px-4 sm:px-6 lg:px-8 bg-[var(--bg-primary)]">
       <div className="max-w-6xl mx-auto">
@@ -249,15 +281,35 @@ export default function AdminDashboard() {
               Manage your product catalog
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleNewProduct}
-              className="btn-primary flex items-center gap-2 text-sm py-2.5 px-5"
-              id="add-product-btn"
-            >
-              <Plus className="w-4 h-4" />
-              Add Product
-            </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-4">
+              <button
+                onClick={() => setActiveTab("products")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "products" ? "bg-[var(--accent-gold)] text-black" : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Products
+              </button>
+              <button
+                onClick={() => setActiveTab("orders")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "orders" ? "bg-[var(--accent-gold)] text-black" : "text-[var(--text-secondary)] hover:text-white"
+                }`}
+              >
+                Orders
+              </button>
+            </div>
+            {activeTab === "products" && (
+              <button
+                onClick={handleNewProduct}
+                className="btn-primary flex items-center gap-2 text-sm py-2.5 px-5"
+                id="add-product-btn"
+              >
+                <Plus className="w-4 h-4" />
+                Add Product
+              </button>
+            )}
             <button
               onClick={logout}
               className="btn-secondary flex items-center gap-2 text-sm py-2.5 px-5"
@@ -269,17 +321,30 @@ export default function AdminDashboard() {
           </div>
         </motion.div>
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input-dark text-sm h-10 pl-10 w-full sm:w-72"
-            id="admin-search"
-          />
+        {/* Search & Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input-dark text-sm h-10 pl-10 w-full"
+              id="admin-search"
+            />
+          </div>
+          {activeTab === "orders" && (
+            <select
+              value={orderStatusFilter}
+              onChange={(e) => setOrderStatusFilter(e.target.value)}
+              className="input-dark text-sm h-10 px-4 w-full sm:w-48 cursor-pointer"
+            >
+              <option value="all">All Orders</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          )}
         </div>
 
         {/* Products Table */}
@@ -295,109 +360,233 @@ export default function AdminDashboard() {
                 <div key={i} className="h-16 skeleton" />
               ))}
             </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="p-12 text-center">
-              <Package className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-              <p className="text-[var(--text-secondary)]">No products found</p>
-              <p className="text-sm text-[var(--text-muted)] mt-1">
-                Click "Add Product" to create your first product
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[var(--border-subtle)]">
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
-                      Product
-                    </th>
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3 hidden sm:table-cell">
-                      Category
-                    </th>
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
-                      Price
-                    </th>
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3 hidden md:table-cell">
-                      Status
-                    </th>
-                    <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => (
-                    <tr
-                      key={product.id}
-                      className="border-b border-[var(--border-subtle)] last:border-b-0 hover:bg-white/[0.02] transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--bg-secondary)]">
-                            {product.image_url && (
-                              <Image
-                                src={product.image_url}
-                                alt={product.name}
-                                fill
-                                className="object-cover"
-                                sizes="40px"
-                              />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-[var(--text-primary)] truncate max-w-[200px]">
-                              {product.name}
-                            </p>
-                            <p className="text-xs text-[var(--text-muted)] truncate max-w-[200px] sm:hidden">
-                              {product.categories?.join(", ")}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className="text-xs text-[var(--text-secondary)] capitalize">
-                          {product.categories?.join(", ")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-[var(--accent-gold)]">
-                          Rs. {product.price.toLocaleString("en-IN")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                            product.available
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-red-500/10 text-red-400"
-                          }`}
-                        >
-                          {product.available ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleEdit(product)}
-                            className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                            aria-label={`Edit ${product.name}`}
-                          >
-                            <Pencil className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(product.id)}
-                            className="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
-                            aria-label={`Delete ${product.name}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-red-400" />
-                          </button>
-                        </div>
-                      </td>
+          ) : activeTab === "products" ? (
+            filteredProducts.length === 0 ? (
+              <div className="p-12 text-center">
+                <Package className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
+                <p className="text-[var(--text-secondary)]">No products found</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">
+                  Click "Add Product" to create your first product
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[var(--border-subtle)]">
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Product
+                      </th>
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3 hidden sm:table-cell">
+                        Category
+                      </th>
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Price
+                      </th>
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3 hidden md:table-cell">
+                        Status
+                      </th>
+                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => (
+                      <tr
+                        key={product.id}
+                        className="border-b border-[var(--border-subtle)] last:border-b-0 hover:bg-white/[0.02] transition-colors"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--bg-secondary)]">
+                              {product.image_url && (
+                                <Image
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="40px"
+                                />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[var(--text-primary)] truncate max-w-[200px]">
+                                {product.name}
+                              </p>
+                              <p className="text-xs text-[var(--text-muted)] truncate max-w-[200px] sm:hidden">
+                                {product.categories?.join(", ")}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 hidden sm:table-cell">
+                          <span className="text-xs text-[var(--text-secondary)] capitalize">
+                            {product.categories?.join(", ")}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-[var(--accent-gold)]">
+                            Rs. {product.price.toLocaleString("en-IN")}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              product.available
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-red-500/10 text-red-400"
+                            }`}
+                          >
+                            {product.available ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleEdit(product)}
+                              className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                              aria-label={`Edit ${product.name}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(product.id)}
+                              className="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+                              aria-label={`Delete ${product.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-red-400" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            filteredOrders.length === 0 ? (
+              <div className="p-12 text-center">
+                <ShoppingBag className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
+                <p className="text-[var(--text-secondary)]">No orders found</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[var(--border-subtle)]">
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Order Info
+                      </th>
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Customer
+                      </th>
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Amount
+                      </th>
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Status
+                      </th>
+                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-4 py-3">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order) => (
+                      <React.Fragment key={order.id}>
+                        <tr
+                          className="border-b border-[var(--border-subtle)] hover:bg-white/[0.02] transition-colors"
+                        >
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-medium text-[var(--text-primary)]">
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-[var(--text-muted)] font-mono">
+                              {order.id.slice(0, 8)}...
+                            </p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-medium text-[var(--text-primary)]">
+                              {order.delivery_details?.name}
+                            </p>
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {order.delivery_details?.email}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-medium text-[var(--accent-gold)]">
+                              Rs. {order.total_amount?.toLocaleString("en-IN")}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                order.status === "completed"
+                                  ? "bg-emerald-500/10 text-emerald-400"
+                                  : "bg-amber-500/10 text-amber-400"
+                              }`}
+                            >
+                              {order.status === "completed" ? (
+                                <CheckCircle className="w-3 h-3" />
+                              ) : (
+                                <Clock className="w-3 h-3" />
+                              )}
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-3">
+                              <button
+                                onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                                className="text-xs font-medium text-[var(--accent-gold)] hover:underline"
+                              >
+                                {expandedOrder === order.id ? "Hide Details" : "View Items"}
+                              </button>
+                              <button
+                                onClick={() => toggleOrderStatus(order.id, order.status)}
+                                className="text-xs font-medium text-[var(--text-secondary)] hover:text-white underline underline-offset-2"
+                              >
+                                Mark as {order.status === "completed" ? "Pending" : "Completed"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedOrder === order.id && (
+                          <tr className="bg-white/[0.01]">
+                            <td colSpan={5} className="px-8 py-4">
+                              <div className="space-y-3">
+                                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">Order Items:</p>
+                                {order.items?.map((item: any, i: number) => (
+                                  <div key={i} className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
+                                    <span className="text-[var(--text-primary)]">
+                                      {item.product.name} <span className="text-[var(--text-muted)] ml-2">x{item.quantity}</span>
+                                    </span>
+                                    <span className="text-[var(--text-secondary)]">
+                                      Rs. {(item.quantity * item.product.price).toLocaleString("en-IN")}
+                                    </span>
+                                  </div>
+                                ))}
+                                <div className="pt-2">
+                                  <p className="text-xs text-[var(--text-muted)]">Delivery Address:</p>
+                                  <p className="text-sm text-[var(--text-secondary)]">
+                                    {order.delivery_details?.address}, {order.delivery_details?.state}
+                                  </p>
+                                  <p className="text-sm text-[var(--text-secondary)]">
+                                    Phone: {order.delivery_details?.phone}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
         </motion.div>
 
