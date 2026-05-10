@@ -12,6 +12,8 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -43,6 +45,8 @@ function CheckoutContent() {
   const [state, setState] = useState("");
   const [unavailableProducts, setUnavailableProducts] = useState<string[]>([]);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
 
   // Fetch single product if buying directly
   useEffect(() => {
@@ -92,6 +96,94 @@ function CheckoutContent() {
       .map((item) => item.product.name);
 
     setUnavailableProducts(notAvailable);
+
+    if (notAvailable.length > 0) return;
+
+    // Proceed to payment
+    handlePayment();
+  };
+
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    try {
+      // 1. Create order
+      const createRes = await fetch("/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: checkoutTotal }),
+      });
+      
+      const { order } = await createRes.json();
+      if (!order) throw new Error("Failed to create order");
+
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Enter the Key ID generated from the Dashboard
+        amount: order.amount,
+        currency: order.currency,
+        name: "Feel The Meal",
+        description: "Premium Confections Order",
+        order_id: order.id,
+        handler: async function (response: any) {
+          try {
+            // 3. Verify Payment & Send Email
+            const verifyRes = await fetch("/api/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderDetails: {
+                  name,
+                  phone,
+                  address,
+                  state,
+                  items: checkoutItems,
+                  totalPaid: checkoutTotal,
+                  orderDate: new Date().toISOString(),
+                },
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              alert("Payment successful! Your order has been placed.");
+              if (!singleProduct) {
+                // Clear cart if it was a cart checkout
+                cartItems.forEach(item => removeFromCart(item.product.id));
+              }
+              router.push("/products");
+            } else {
+              alert("Payment verification failed. Please contact support.");
+            }
+          } catch (error) {
+            console.error(error);
+            alert("Error processing payment verification.");
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+        prefill: {
+          name: name,
+          contact: phone,
+        },
+        theme: {
+          color: "#c9a96e",
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", function (response: any) {
+        setIsProcessing(false);
+        alert(response.error.description);
+      });
+      rzp.open();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to initiate payment. Please try again.");
+      setIsProcessing(false);
+    }
   };
 
   if (loading) {
@@ -126,6 +218,7 @@ function CheckoutContent() {
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-[var(--bg-primary)]">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <div className="max-w-3xl mx-auto">
         {/* Back */}
         <motion.div
@@ -385,10 +478,11 @@ function CheckoutContent() {
               {/* Pay Button */}
               <button
                 type="submit"
-                className="w-full btn-primary py-3.5 rounded-xl text-sm font-semibold mt-4"
+                disabled={isProcessing}
+                className="w-full btn-primary py-3.5 rounded-xl text-sm font-semibold mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
                 id="checkout-pay-btn"
               >
-                {unavailableProducts.length > 0 ? "Check Again" : "Pay"}
+                {isProcessing ? "Processing..." : unavailableProducts.length > 0 ? "Check Again" : `Pay Rs. ${checkoutTotal.toLocaleString("en-IN")}`}
               </button>
 
               {unavailableProducts.length === 0 &&
@@ -398,8 +492,7 @@ function CheckoutContent() {
                 address.trim() &&
                 state && (
                   <p className="text-xs text-emerald-400 text-center mt-2">
-                    All items are available in {state}. Payment integration
-                    coming soon.
+                    All items are available in {state}. Secure payment powered by Razorpay.
                   </p>
                 )}
             </form>
