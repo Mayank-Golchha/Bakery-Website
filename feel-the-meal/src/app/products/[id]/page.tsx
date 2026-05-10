@@ -150,7 +150,7 @@ export default function ProductDetailPage() {
           >
             {/* Category */}
             <span className="text-xs uppercase tracking-[0.2em] text-[var(--accent-gold)] font-medium mb-2">
-              {product.category}
+              {product.categories?.join(", ")}
             </span>
 
             {/* Name */}
