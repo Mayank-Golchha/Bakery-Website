@@ -55,6 +55,7 @@ export interface Product {
   description: string;
   price: number;
   categories: ProductCategory[];
+  category: string,
   image_url: string;
   available: boolean;
   available_all_states: boolean;
