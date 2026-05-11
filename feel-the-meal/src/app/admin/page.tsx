@@ -1,19 +1,19 @@
 /**
- * Admin page layout.
- * Contains admin login and dashboard.
- * If not authenticated, shows login form.
- * If authenticated, shows product management dashboard.
+ * Old admin page.
+ * Redirects to home since admin is now hidden.
  */
 
 "use client";
 
-import React from "react";
-import { useAdminAuth } from "@/context/AdminAuthContext";
-import AdminLogin from "@/components/admin/AdminLogin";
-import AdminDashboard from "@/components/admin/AdminDashboard";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AdminPage() {
-  const { isAuthenticated } = useAdminAuth();
+  const router = useRouter();
 
-  return isAuthenticated ? <AdminDashboard /> : <AdminLogin />;
+  useEffect(() => {
+    router.replace("/");
+  }, [router]);
+
+  return null;
 }

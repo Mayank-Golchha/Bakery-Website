@@ -28,7 +28,7 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
-import { useAdminAuth } from "@/context/AdminAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { Product, ProductCategory, INDIAN_STATES } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 
@@ -45,7 +45,7 @@ const EMPTY_PRODUCT = {
 };
 
 export default function AdminDashboard() {
-  const { logout } = useAdminAuth();
+  const { logout } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<any[]>([]);

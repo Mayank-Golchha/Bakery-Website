@@ -179,16 +179,6 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* Admin Link */}
-            <Link
-              href="/admin"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 hover:border-[var(--accent-gold)]/30 hover:bg-white/5 transition-all text-xs text-[var(--text-secondary)] hover:text-[var(--accent-gold)]"
-              id="admin-link"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              Admin
-            </Link>
-
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -270,13 +260,6 @@ export default function Navbar() {
                 </button>
               )}
 
-              <Link
-                href="/admin"
-                className="flex items-center gap-2 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-gold)] border-t border-white/10 pt-4 mt-2"
-              >
-                <Lock className="w-4 h-4" />
-                Admin Panel
-              </Link>
             </div>
           </motion.div>
         )}
