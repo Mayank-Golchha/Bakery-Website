@@ -17,19 +17,19 @@ const CATEGORIES = [
     name: "Cakes",
     slug: "cakes",
     description: "Layered perfection crafted for every celebration",
-    image: "/image1.webp",
+    image: "/image9.webp",
   },
   {
     name: "Chocolates",
     slug: "chocolates",
     description: "Rich indulgence hand-tempered to silky smoothness",
-    image: "/image5.webp",
+    image: "/image15.webp",
   },
   {
     name: "Cookies",
     slug: "cookies",
     description: "Buttery bites baked with timeless tradition",
-    image: "/image9.webp",
+    image: "/image6.webp",
   },
 ];
 
