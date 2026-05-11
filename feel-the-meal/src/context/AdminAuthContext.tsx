@@ -35,9 +35,12 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback((username: string, password: string): boolean => {
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
     if (
-      username === ADMIN_CREDENTIALS.username &&
-      password === ADMIN_CREDENTIALS.password
+      trimmedUsername === ADMIN_CREDENTIALS.username &&
+      trimmedPassword === ADMIN_CREDENTIALS.password
     ) {
       setIsAuthenticated(true);
       localStorage.setItem(AUTH_STORAGE_KEY, "true");

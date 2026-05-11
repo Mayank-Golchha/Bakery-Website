@@ -21,7 +21,11 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
 
-    const success = login(username, password);
+    // Trim inputs to handle accidental spaces on mobile
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
+    const success = login(trimmedUsername, trimmedPassword);
     if (!success) {
       setError("Invalid credentials. Please try again.");
     }
@@ -65,6 +69,8 @@ export default function AdminLogin() {
               className="input-dark text-sm"
               placeholder="Enter username"
               autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
               id="admin-username"
             />
           </div>
@@ -80,6 +86,8 @@ export default function AdminLogin() {
               className="input-dark text-sm"
               placeholder="Enter password"
               autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
               id="admin-password"
             />
           </div>
