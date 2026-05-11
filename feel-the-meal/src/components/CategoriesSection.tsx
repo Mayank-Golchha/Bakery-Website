@@ -17,7 +17,7 @@ const CATEGORIES = [
     name: "Cakes",
     slug: "cakes",
     description: "Layered perfection crafted for every celebration",
-    image: "/image9.webp",
+    image: "/image2.webp",
   },
   {
     name: "Chocolates",
